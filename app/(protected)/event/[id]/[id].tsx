@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, Share } from 'react-native';
+import { View, Text, Image, ScrollView, Share, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/authStore';
@@ -11,13 +11,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import LoadingScreen  from '@/components/ui/LoadingScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { locationService } from '@/features/events/services/locationService';
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const user = useAuthStore((s) => s.user);
   const { event, isLoading } = useEventDetails(id);
-  const { isAttending, join, leave, isJoining, isLeaving } = useRsvp(id);
+const { isAttending, join, leave, isJoining, isLeaving } = useRsvp(id, event);
 
   const { data: attendees = [] } = useQuery({
     queryKey: ['event', id, 'attendees'],
@@ -56,9 +57,30 @@ export default function EventDetailsScreen() {
         <Text style={[theme.typography.body, { color: theme.colors.textSecondary, marginTop: theme.spacing.xs }]}>
           {event.date.toDate().toLocaleDateString()} · {event.startTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {event.endTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
-        <Text style={[theme.typography.body, { color: theme.colors.textSecondary }]}>
-          {event.location.address}
-        </Text>
+        <Pressable
+  onPress={() => {
+    if (event.location.coordinates) {
+      locationService.openInMaps(
+        event.location.coordinates.latitude,
+        event.location.coordinates.longitude,
+        event.title
+      );
+    }
+  }}
+  disabled={!event.location.coordinates}
+>
+  <Text
+    style={[
+      theme.typography.body,
+      {
+        color: event.location.coordinates ? theme.colors.accent : theme.colors.textSecondary,
+        textDecorationLine: event.location.coordinates ? 'underline' : 'none',
+      },
+    ]}
+  >
+    {event.location.address}
+  </Text>
+</Pressable>
 
         <View style={{ height: theme.spacing.lg }} />
 
